@@ -83,7 +83,7 @@ ISR (PCINT0_vect)
 }
 
 //ISR Niklas
-ISR (PCINT2_vect)
+ISR (INT0_vect)
 {
 	flag_pcint = 1;
 }
@@ -102,8 +102,8 @@ int main (void)
 	DDRA  &= ~((1<<PINA3)|(1<<PINA4)|(1<<PINA5)|(1<<PINA6)|(1<<PINA7));				// PINA3-PINA7 als Eingänge definiert
 	PORTA |=  ((1<<PINA3)|(1<<PINA4)|(1<<PINA5)|(1<<PINA6)|(1<<PINA7));				// PINA3-PINA7 werden auf HIGH gezogen
 	
-	DDRC &= ~(1<<PINC0); // PB3 als Reedsensor-Eingang
-	PORTC |= (1<<PINC0); // Sensor zieht Pin auf Masse
+	DDRD &= ~(1<<PIND2); // als Reedsensor-Eingang
+	PORTD |= (1<<PIND2); // Sensor zieht Pin auf Masse
 	
 	
 	DDRB = 0x0F;	// DDRB als Ausgang setzen
@@ -148,7 +148,7 @@ int main (void)
 		}
 		
 		
-		state_sensor = !(PINC & (1<<PINC0)); //inverted because of pull-up on PA3. state_sensor == 1 means magnet is near reed contact
+		state_sensor = !(PIND & (1<<PIND2)); //inverted because of pull-up on Pin. state_sensor == 1 means magnet is near reed contact
 		if(flag_pcint || (state_sensor == 1))
 		{
 			if(time_sys > time_lasthigh + time_debounce)
@@ -284,12 +284,15 @@ int main (void)
 			case 2:																	//Ausgabe Seite 1 ohne Menüband
 					LCD_GotoXY(1,3);
 					LCD_PutString_P(PSTR("Geschwindigkeit:"));
-					LCD_GotoXY(1,4);
 					
-					LCD_PutNumber(1, 2);
+					LCD_GotoXY(1,4);
+					LCD_PutString_P(PSTR("   "));
+					
+					LCD_GotoXY(1,4);
+					LCD_PutNumber(/*1*/(int)(3.6*speed_current), 10);
 					
 					LCD_GotoXY(4,4);
-					LCD_PutString_P(PSTR("m/s"));
+					LCD_PutString_P(PSTR("km/h"));
 					LCD_GotoXY(1,5);
 					LCD_PutString_P(PSTR("Leistung:"));
 					LCD_GotoXY(1,6);
@@ -358,8 +361,12 @@ int main (void)
 void init_pcint (void)
 {
 	cli();
-	PCICR |= (1<<PCIE2); //enable interrupt on pinchange
-	PCMSK2 = (1<<PCINT16); //mask for port pin PB5
+	/*PCICR |= (1<<PCIE2); //enable interrupt on pinchange
+	PCMSK2 = (1<<PCINT16); //mask for port pin PB5*/
+	
+	EICRA |= (1<<ISC00); //pinchange interrupt
+	EIMSK |= (1<<INT0); //mask for pin PD2
+	
 	sei();
 }
 void init_sysclk (void) //sysclk uses Timer0 with output comparision
