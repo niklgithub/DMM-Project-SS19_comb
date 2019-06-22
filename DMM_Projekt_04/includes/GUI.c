@@ -120,8 +120,8 @@ void GUI_select(volatile uint8_t sel_gui,volatile uint8_t sel_dia,volatile uint8
 
 void GUI_Logger(void)						//Ausgabe Menüband Seite 1 bzw. Logger
 {
-	PORTB &= ~(1<<PINB0);
-	PORTB |= (1<<PINB1);
+	//PORTB &= ~(1<<PINB0);
+	//PORTB |= (1<<PINB1);
 	
 	LCD_Clear();
 	LCD_GotoXY(0,0);
@@ -139,8 +139,8 @@ void GUI_Logger(void)						//Ausgabe Menüband Seite 1 bzw. Logger
 
 void GUI_Kurve(void)						//Ausgabe Menüband + Graphenstruktur Seite 2 bzw. Kurve
 {
-	PORTB &= ~(1<<PINB1);
-	PORTB |= ((1<<PINB2)|(1<<PINB0));
+	//PORTB &= ~(1<<PINB1);
+	//PORTB |= ((1<<PINB2)|(1<<PINB0));
 	
 	LCD_Clear();
 	LCD_GotoXY(0,0);
@@ -166,8 +166,8 @@ void GUI_Kurve(void)						//Ausgabe Menüband + Graphenstruktur Seite 2 bzw. Kurv
 
 void GUI_Masse(void)						//Ausgabe Menüband Seite 3 bzw. Masse
 {
-	PORTB &= ~(1<<PINB2);
-	PORTB |= (1<<PINB1);
+	//PORTB &= ~(1<<PINB2);
+	//PORTB |= (1<<PINB1);
 	
 	LCD_Clear();
 	LCD_GotoXY(0,0);
