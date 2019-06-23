@@ -62,6 +62,7 @@ uint32_t time_measarray[5] = {0};
 
 uint8_t flag_measarray[5] = {0};
 uint8_t speed_threshold = 1; // in m/s. Lower speeds ain't used for calculations
+uint8_t speed_last = 255;
 uint8_t speed_table[LENGTH_TABLE] = {0}; //8-bit representation: 0 -> 0 km/h; 255 -> (255*0.2) = 51 km/h
 uint8_t power_table[LENGTH_TABLE] = {0}; //8-bit representation: 0 -> 0 W; 255 -> (255*2) = 510 W
 double speed_current = 0; //speed from time 2 samples before
@@ -75,6 +76,7 @@ int8_t state_recbutt = -1; //for activating recording of speed-power-curve
 uint32_t time_recbuttposedge = 0; 
 int8_t flag_recbutt = 0;
 int8_t state_record = 0; //if 1 recording a new curve runs
+int8_t state_recordlast = 0;
 
 uint32_t time_debug = 0;
 
@@ -172,8 +174,7 @@ int main (void)
 					flag_recbutt = 1;
 					state_record = !state_record;
 					
-					if(state_record) PORTB &= ~(1<<PINB1);
-					if(!state_record) PORTB |= (1<<PINB1);
+					
 				}
 			}
 		}
@@ -182,6 +183,9 @@ int main (void)
 			time_recbuttposedge = time_sys;
 			flag_recbutt = 0;
 		}
+		
+		if(state_record) PORTB &= ~(1<<PINB1);
+		if(!state_record) PORTB |= (1<<PINB1);
 		
 		
 		state_sensor = !(PIND & (1<<PIND2)); //inverted because of pull-up on Pin. state_sensor == 1 means magnet is near reed contact
@@ -195,7 +199,8 @@ int main (void)
 			flag_pcint = 0;
 		}
 		
-		
+		if(state_record && (state_recordlast == 0)) reset_table();
+		state_recordlast = state_record;
 		
 		if (flag_turn) //to do: add switch to activate storing a new curve
 		{
@@ -261,13 +266,13 @@ int main (void)
 				//char output[10];
 
 				//snprintf(output, 10, "%f", acc_current);
-				UART_PutInteger((int)(3.6*speed_current));
+				/*UART_PutInteger((int)(3.6*speed_current));
 				UART_PutString("\n\r");
 				UART_PutInteger((int)(1000*acc_current));
 				UART_PutString("\n\r");
 				UART_PutInteger((int)power_current);
 				UART_PutString("\n\r");
-				UART_PutString("\n\r");
+				UART_PutString("\n\r");*/
 				/*UART_PutInteger((int)speed_current);
 				UART_PutString("\n\r");
 				//UART_PutString(output);
@@ -276,6 +281,7 @@ int main (void)
 				UART_PutInteger((int)power_current);
 				UART_PutString("\n\r");
 				UART_PutString("\n\r");*/
+				
 				
 				if (state_record)
 				{
@@ -479,9 +485,17 @@ void init_sysclk (void) //sysclk uses Timer0 with output comparision
 	sei();
 }
 
+void reset_table (void)
+{
+	for (int i = 0; i<LENGTH_TABLE;i++)
+	{
+		speed_table[i] = 0;power_table[i] = 0;
+		speed_last = 255;
+	}
+}
+
 void store_table (double speed, double power)
 {
-	static uint8_t speed_last = 255;
 	static uint8_t i = 0;
 	uint8_t speed_int = 0;
 	uint8_t power_int = 0;
@@ -499,11 +513,13 @@ void store_table (double speed, double power)
 	{
 		speed_table[i] = speed_int;
 		//UART_PutString("\n\rSpeed: ");
-		//UART_PutInteger(speed_int);
+		UART_PutInteger(speed_int);
+		UART_PutString("\n\r");
 		power_table[i] = power_int;
 		//UART_PutString("\n\rPower: ");
-		//UART_PutInteger(power_int);
-		//UART_PutString("\n\r");
+		UART_PutInteger(power_int);
+		UART_PutString("\n\r");
+		UART_PutString("\n\r");
 		speed_last = speed_int;
 		
 		if (i < LENGTH_TABLE) //prevent overflow of i
