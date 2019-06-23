@@ -59,11 +59,6 @@ int8_t flag_time = 0; //to count time_sys in main function
 int8_t flag_store = 0; //1 while recording new curve
 uint16_t size_wheel = 2215; //wheels circumference in mm
 uint32_t time_measarray[5] = {0};
-uint32_t time_measarray0 = 0;
-uint32_t time_measarray1 = 0;
-uint32_t time_measarray2 = 0;
-uint32_t time_measarray3 = 0;
-uint32_t time_measarray4 = 0;
 
 uint8_t flag_measarray[5] = {0};
 uint8_t speed_threshold = 1; // in m/s. Lower speeds ain't used for calculations
@@ -75,7 +70,11 @@ double power_current = 0; //power in W from time 2 samples before
 double mass_eff = 80; //total effective mass in kg: bike + rider + transformed inertia torque
 double power_calc = 0; //power calculated by interpolation of measured curve
 uint32_t time_syssec = 0;
-int8_t state_sensor = -1;
+int8_t state_sensor = -1; //buffers reed-sensor signal
+int8_t state_recbutt = -1; //for activating recording of speed-power-curve
+uint32_t time_recbuttposedge = 0; 
+int8_t flag_recbutt = 0;
+int8_t state_record = 0; //if 1 recording a new curve runs
 
 uint32_t time_debug = 0;
 
@@ -117,6 +116,9 @@ int main (void)
 	DDRD &= ~(1<<PIND2); // als Reedsensor-Eingang
 	PORTD |= (1<<PIND2); // Sensor zieht Pin auf Masse
 	
+	DDRD &= ~(1<<PIND3); // Kurvenaufzeichnung aktivieren
+	PORTD |= (1<<PIND3); // Sensor zieht Pin auf Masse
+	
 	
 	DDRB = 0x0F;	// DDRB als Ausgang setzen
 	PORTB |= 0x0F;	// Pins an PORTB auf High (beschaltung)
@@ -154,10 +156,31 @@ int main (void)
 		int c = 0;
 		
 		//main Niklas
-		if((time_sys - (1000*time_syssec))>= 1000)
+		if((time_sys - (1000*time_syssec))>= 1000) //heartbeat every second
 		{
 			time_syssec++;
 			PORTB ^= (1<<PINB0);
+		}
+		
+		state_recbutt = !(PIND & (1<<PIND3)); //inverted because of pull-up on Pin. with debouncing. Intention of this function is toggling state_record.
+		if(state_recbutt)
+		{
+			if(time_recbuttposedge<(time_sys+200))
+			{
+				if(flag_recbutt == 0) 
+				{
+					flag_recbutt = 1;
+					state_record = !state_record;
+					
+					if(state_record) PORTB &= ~(1<<PINB1);
+					if(!state_record) PORTB |= (1<<PINB1);
+				}
+			}
+		}
+		else
+		{
+			time_recbuttposedge = time_sys;
+			flag_recbutt = 0;
 		}
 		
 		
@@ -173,6 +196,7 @@ int main (void)
 		}
 		
 		
+		
 		if (flag_turn) //to do: add switch to activate storing a new curve
 		{
 			PORTB ^= (1<<PINB3);
@@ -184,11 +208,6 @@ int main (void)
 			time_measarray[3] = time_measarray[4];
 			time_measarray[4] = time_sys;
 			
-			/*UART_PutInteger(time_measarray[3]);
-			UART_PutString("\n\r");
-			UART_PutInteger(time_measarray[1]);
-			UART_PutString("\n\r");*/
-			
 			flag_measarray[0] = 1;
 			flag_measarray[1] = flag_measarray[2];
 			flag_measarray[2] = flag_measarray[3];
@@ -196,26 +215,17 @@ int main (void)
 			if ( (time_measarray[4]-time_measarray[3]) > 0 ) //prevent divide by 0 errors
 			{
 				flag_measarray[4] = ((((double) size_wheel/((double) time_measarray[4]-(double) time_measarray[3]))) >= (double) speed_threshold);
+				if(flag_measarray[4] == 0) state_record = 0;
 			}
 			else
 			{
 				flag_measarray[4] = 0;
 			}
-			
-			//UART_PutString("\n\rFlagMeasarray0...4\n\r");
-			
-			
+						
 			if (flag_measarray[0] && flag_measarray[1] && flag_measarray[2] && flag_measarray[3] && flag_measarray[4])
 			{
 				//differentiation based on method of central difference
 				speed_current = (double) 2*size_wheel/(time_measarray[3]-time_measarray[1]); //speed in mm/ms = m/s
-				
-				UART_PutString("\n\rspeed_current: \n\r");
-				UART_PutInteger((int)(3.6*speed_current));
-				UART_PutString("\n\r");
-				UART_PutString("\n\r");
-				
-				
 				acc_current = (double) 2*1000*size_wheel*(((1/(time_measarray[4]-time_measarray[2]))-(1/(time_measarray[2]-time_measarray[0])))/(time_measarray[3]-time_measarray[1])); //acceleration in 1000mm/(ms)²=m/s²
 				power_current = (double) (-1) * mass_eff * speed_current * acc_current; //power in W
 				
