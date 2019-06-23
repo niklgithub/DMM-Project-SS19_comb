@@ -40,11 +40,13 @@ SUBDIRS :=  \
 C_SRCS +=  \
 ../includes/counting.c \
 ../includes/dataflash.c \
+../includes/fifo.c \
 ../includes/Joystick.c \
 ../includes/lcd.c \
 ../includes/GUI.c \
 ../includes/spi.c \
 ../includes/twi.c \
+../includes/uart.c \
 ../main.c
 
 
@@ -57,41 +59,49 @@ ASM_SRCS +=
 OBJS +=  \
 includes/counting.o \
 includes/dataflash.o \
+includes/fifo.o \
 includes/Joystick.o \
 includes/lcd.o \
 includes/GUI.o \
 includes/spi.o \
 includes/twi.o \
+includes/uart.o \
 main.o
 
 OBJS_AS_ARGS +=  \
 includes/counting.o \
 includes/dataflash.o \
+includes/fifo.o \
 includes/Joystick.o \
 includes/lcd.o \
 includes/GUI.o \
 includes/spi.o \
 includes/twi.o \
+includes/uart.o \
 main.o
 
 C_DEPS +=  \
 includes/counting.d \
 includes/dataflash.d \
+includes/fifo.d \
 includes/Joystick.d \
 includes/lcd.d \
 includes/GUI.d \
 includes/spi.d \
 includes/twi.d \
+includes/uart.d \
 main.d
 
 C_DEPS_AS_ARGS +=  \
 includes/counting.d \
 includes/dataflash.d \
+includes/fifo.d \
 includes/Joystick.d \
 includes/lcd.d \
 includes/GUI.d \
 includes/spi.d \
 includes/twi.d \
+includes/uart.d \
 main.d
 
 OUTPUT_FILE_PATH +=DMM_Projekt_04.elf
@@ -108,6 +118,10 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
+
+
 
 
 

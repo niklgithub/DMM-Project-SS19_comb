@@ -95,7 +95,7 @@ LCD_Update (void)
   
   /* Backup Status Register and disable Interrupts */
   uint8_t sreg = SREG;
-  cli();
+  //cli(); //Ausgeschaltet von Niklas
   
   do
     {
@@ -121,7 +121,7 @@ LCD_Update (void)
   lcd_frameupdate = 0;
   
   /* Restore Status Register */
-  SREG = sreg;
+  //SREG = sreg; //Ausgeschaltet von Niklas
 }
 
 void

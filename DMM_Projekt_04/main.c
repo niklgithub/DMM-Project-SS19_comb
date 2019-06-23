@@ -2,18 +2,20 @@
 #define F_CPU 16000000UL
 #endif
 
-
 #include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
-#include <avr/interrupt.h>
 
 #include "includes/lcd.h"
-#include "includes/twi.h"
-#include "includes/dataflash.h"
+//#include "includes/twi.h"
+//#include "includes/dataflash.h"
 #include "includes/Joystick.h"
 #include "includes//GUI.h"
 #include "includes/counting.h"
+#include "includes/uart.h"
 
 #define LENGTH_TABLE 250
 
@@ -68,6 +70,8 @@ double mass_eff = 80; //total effective mass in kg: bike + rider + transformed i
 double power_calc = 0; //power calculated by interpolation of measured curve
 uint32_t time_syssec = 0;
 int8_t state_sensor = -1;
+
+uint16_t time_debug = 0;
 //Variablen Niklas ENDE
 
 double calc_power (double speed, double acceleration);
@@ -91,7 +95,14 @@ ISR (INT0_vect)
 ISR (TIMER0_COMPA_vect)
 {
 	flag_time++;
+	time_debug++;
+	if(time_debug>=1000)
+	{
+		time_debug=0;
+		PORTB ^= (1<<PINB1);
+	}
 } 
+
 //ISR Niklas ENDE
 
 int main (void)
@@ -126,6 +137,7 @@ int main (void)
 	
 	init_pcint();
 	init_sysclk();
+	UART_Init ();
 												
 	
 
@@ -187,9 +199,14 @@ int main (void)
 			if (flag_measarray[0] && flag_measarray[1] && flag_measarray[2] && flag_measarray[3] && flag_measarray[4])
 			{
 				//differentiation based on method of central difference
-				speed_current = 2*size_wheel/(time_measarray[3]-time_measarray[1]); //speed in mm/ms = m/s
-				acc_current = 2*1000*size_wheel*(((1/(time_measarray[4]-time_measarray[2]))-(1/(time_measarray[2]-time_measarray[0])))/(time_measarray[3]-time_measarray[1])); //acceleration in 1000mm/(ms)²=m/s²
-				power_current = (-1) * mass_eff * speed_current * acc_current; //power in W
+				speed_current = time_measarray[3]-time_measarray[1];//(double) 2*size_wheel/(time_measarray[3]-time_measarray[1]); //speed in mm/ms = m/s
+				
+				UART_PutString("\n\rspeed_current: \n\r");
+				UART_PutInteger((int)speed_current);
+				
+				
+				acc_current = (double) 2*1000*size_wheel*(((1/(time_measarray[4]-time_measarray[2]))-(1/(time_measarray[2]-time_measarray[0])))/(time_measarray[3]-time_measarray[1])); //acceleration in 1000mm/(ms)²=m/s²
+				power_current = (double) (-1) * mass_eff * speed_current * acc_current; //power in W
 				
 				if (flag_store)
 				{
@@ -201,17 +218,17 @@ int main (void)
 					power_calc = calc_power (speed_current , acc_current);
 				}
 			}
+			else
+			{
+				speed_current = 0;
+				acc_current = 0;
+			}
 			
 			
 			flag_turn = 0;
 		}
 		
-		/*Dont write main-code after following block!*/
-		do //to realise 1 ms system period
-		{
-		} while (flag_time==0);
-		time_sys += flag_time; // checking if flag_time > 1 would mean main takes too much time
-		flag_time = 0;
+		
 		//main Niklas ENDE
 			
 		
@@ -286,18 +303,18 @@ int main (void)
 					LCD_PutString_P(PSTR("Geschwindigkeit:"));
 					
 					LCD_GotoXY(1,4);
-					LCD_PutString_P(PSTR("   "));
+					LCD_PutString_P(PSTR("        "));
 					
 					LCD_GotoXY(1,4);
-					LCD_PutNumber(/*1*/(int)(3.6*speed_current), 10);
+					LCD_PutNumber(/*1*/(int)(speed_current), 10);  //Philipp: PutNumber kann nur 8-bit-Zahlen ausgeben. 
 					
-					LCD_GotoXY(4,4);
+					LCD_GotoXY(8,4);
 					LCD_PutString_P(PSTR("km/h"));
 					LCD_GotoXY(1,5);
 					LCD_PutString_P(PSTR("Leistung:"));
 					LCD_GotoXY(1,6);
 					
-					LCD_PutNumber(2, 10);
+					/*LCD_PutNumber(0, 10);*/
 					
 					LCD_GotoXY(4,6);
 					LCD_PutString_P(PSTR("W"));
@@ -351,6 +368,21 @@ int main (void)
 			default:
 			break;
 		}
+		
+		/*Dont write main-code after following block!*/
+		do //to realise 1 ms system period
+		{
+		} while (flag_time==0);
+		
+		static int flag_time_max=0;
+		if(flag_time>flag_time_max)flag_time_max=flag_time;
+		
+		LCD_GotoXY(1,6);
+		LCD_PutNumber(flag_time_max, 10);
+		LCD_Update();
+		
+		time_sys += flag_time; // checking if flag_time > 1 would mean main takes too much time
+		flag_time = 0;
 	}
 		
 	return 0;

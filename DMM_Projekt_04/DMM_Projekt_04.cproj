@@ -175,6 +175,12 @@
     <Compile Include="includes\dataflash.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="includes\fifo.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="includes\fifo.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="includes\font.h">
       <SubType>compile</SubType>
     </Compile>
@@ -212,6 +218,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="includes\twi.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="includes\uart.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="includes\uart.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="main.c">
