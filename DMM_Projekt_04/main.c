@@ -208,6 +208,18 @@ int main (void)
 			time_measarray[3] = time_measarray[4];
 			time_measarray[4] = time_sys;
 			
+			/*UART_PutInteger(time_measarray[0]);
+			UART_PutString("\n\r");
+			UART_PutInteger(time_measarray[1]);
+			UART_PutString("\n\r");
+			UART_PutInteger(time_measarray[2]);
+			UART_PutString("\n\r");
+			UART_PutInteger(time_measarray[3]);
+			UART_PutString("\n\r");
+			UART_PutInteger(time_measarray[4]);
+			UART_PutString("\n\r");UART_PutString("\n\r");*/
+			
+			
 			flag_measarray[0] = 1;
 			flag_measarray[1] = flag_measarray[2];
 			flag_measarray[2] = flag_measarray[3];
@@ -226,10 +238,46 @@ int main (void)
 			{
 				//differentiation based on method of central difference
 				speed_current = (double) 2*size_wheel/(time_measarray[3]-time_measarray[1]); //speed in mm/ms = m/s
-				acc_current = (double) 2*1000*size_wheel*(((1/(time_measarray[4]-time_measarray[2]))-(1/(time_measarray[2]-time_measarray[0])))/(time_measarray[3]-time_measarray[1])); //acceleration in 1000mm/(ms)²=m/s²
+				//acc_current = (double) 2*1000*size_wheel*(((1/(time_measarray[4]-time_measarray[2]))-(1/(time_measarray[2]-time_measarray[0])))/(time_measarray[3]-time_measarray[1])); //acceleration in 1000mm/(ms)²=m/s²
+				
+				
+				//t4-t2
+				uint32_t t42 = time_measarray[4]-time_measarray[2];
+				uint32_t t31 = time_measarray[3]-time_measarray[1];
+				uint32_t t20 = time_measarray[2]-time_measarray[0];
+				
+				acc_current = 2*(size_wheel/1000.0)*((1000.0/t42-1000.0/t20)/(t31/1000.0)); //in m/s²
 				power_current = (double) (-1) * mass_eff * speed_current * acc_current; //power in W
 				
-				if (flag_store)
+				
+				/*UART_PutInteger(t42);
+				UART_PutString("\n\r");
+				UART_PutInteger(t31);
+				UART_PutString("\n\r");
+				UART_PutInteger(t20);
+				UART_PutString("\n\r");
+				UART_PutString("\n\r");*/
+				
+				//char output[10];
+
+				//snprintf(output, 10, "%f", acc_current);
+				UART_PutInteger((int)(3.6*speed_current));
+				UART_PutString("\n\r");
+				UART_PutInteger((int)(1000*acc_current));
+				UART_PutString("\n\r");
+				UART_PutInteger((int)power_current);
+				UART_PutString("\n\r");
+				UART_PutString("\n\r");
+				/*UART_PutInteger((int)speed_current);
+				UART_PutString("\n\r");
+				//UART_PutString(output);
+				UART_PutInteger((int)(acc_current));
+				UART_PutString("\n\r");
+				UART_PutInteger((int)power_current);
+				UART_PutString("\n\r");
+				UART_PutString("\n\r");*/
+				
+				if (state_record)
 				{
 					store_table (speed_current , power_current);
 				}
@@ -450,7 +498,12 @@ void store_table (double speed, double power)
 	if (speed_int < speed_last) //store new speed-power-point only if speed is lower than before
 	{
 		speed_table[i] = speed_int;
+		//UART_PutString("\n\rSpeed: ");
+		//UART_PutInteger(speed_int);
 		power_table[i] = power_int;
+		//UART_PutString("\n\rPower: ");
+		//UART_PutInteger(power_int);
+		//UART_PutString("\n\r");
 		speed_last = speed_int;
 		
 		if (i < LENGTH_TABLE) //prevent overflow of i
