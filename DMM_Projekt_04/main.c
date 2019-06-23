@@ -9,20 +9,20 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 
-#include "includes/lcd.h"
+//#include "includes///LCD.h"
 //#include "includes/twi.h"
 //#include "includes/dataflash.h"
 #include "includes/Joystick.h"
-#include "includes//GUI.h"
+//#include "includes//GUI.h"
 #include "includes/counting.h"
 #include "includes/uart.h"
 
 #define LENGTH_TABLE 250
 
 
-#define wait_joy_button()       {LCD_GotoXY(20,7);  \
-	LCD_PutChar(0x10); \
-	LCD_Update();      \
+#define wait_joy_button()       {//LCD_GotoXY(20,7);  \
+	//LCD_PutChar(0x10); \
+	//LCD_Update();      \
 while(((PINA)&0x08));while(!((PINA)&0x08));_delay_ms(20);while(((PINA)&0x08)); },
 
 volatile int TimerOverflow = 0;
@@ -59,6 +59,12 @@ int8_t flag_time = 0; //to count time_sys in main function
 int8_t flag_store = 0; //1 while recording new curve
 uint16_t size_wheel = 2215; //wheels circumference in mm
 uint32_t time_measarray[5] = {0};
+uint32_t time_measarray0 = 0;
+uint32_t time_measarray1 = 0;
+uint32_t time_measarray2 = 0;
+uint32_t time_measarray3 = 0;
+uint32_t time_measarray4 = 0;
+
 uint8_t flag_measarray[5] = {0};
 uint8_t speed_threshold = 1; // in m/s. Lower speeds ain't used for calculations
 uint8_t speed_table[LENGTH_TABLE] = {0}; //8-bit representation: 0 -> 0 km/h; 255 -> (255*0.2) = 51 km/h
@@ -71,7 +77,8 @@ double power_calc = 0; //power calculated by interpolation of measured curve
 uint32_t time_syssec = 0;
 int8_t state_sensor = -1;
 
-uint16_t time_debug = 0;
+uint32_t time_debug = 0;
+
 //Variablen Niklas ENDE
 
 double calc_power (double speed, double acceleration);
@@ -95,12 +102,6 @@ ISR (INT0_vect)
 ISR (TIMER0_COMPA_vect)
 {
 	flag_time++;
-	time_debug++;
-	if(time_debug>=1000)
-	{
-		time_debug=0;
-		PORTB ^= (1<<PINB1);
-	}
 } 
 
 //ISR Niklas ENDE
@@ -128,10 +129,10 @@ int main (void)
 	TCCR1B = (1 << CS12);		// 1024
 	TIMSK1 = (1 << ICIE1);		// Timer1 Interrupt aktiviert
 	
-	LCD_Init();																				// Initialisierungsroutine des LCD
-	LCD_Clear();																			// Löscht den Framebuffer und setzt den Cursor auf (0,0)
+	//LCD_Init();																				// Initialisierungsroutine des //LCD
+	//LCD_Clear();																			// Löscht den Framebuffer und setzt den Cursor auf (0,0)
 		
-	start_sequence ();																		//Startbildschirm (Logo und Projektbeschreibung)	
+	//start_sequence ();																		//Startbildschirm (Logo und Projektbeschreibung)	
 	
 	sei();																					// Einschalten des Interrupt
 	
@@ -183,6 +184,11 @@ int main (void)
 			time_measarray[3] = time_measarray[4];
 			time_measarray[4] = time_sys;
 			
+			/*UART_PutInteger(time_measarray[3]);
+			UART_PutString("\n\r");
+			UART_PutInteger(time_measarray[1]);
+			UART_PutString("\n\r");*/
+			
 			flag_measarray[0] = 1;
 			flag_measarray[1] = flag_measarray[2];
 			flag_measarray[2] = flag_measarray[3];
@@ -196,13 +202,18 @@ int main (void)
 				flag_measarray[4] = 0;
 			}
 			
+			//UART_PutString("\n\rFlagMeasarray0...4\n\r");
+			
+			
 			if (flag_measarray[0] && flag_measarray[1] && flag_measarray[2] && flag_measarray[3] && flag_measarray[4])
 			{
 				//differentiation based on method of central difference
-				speed_current = time_measarray[3]-time_measarray[1];//(double) 2*size_wheel/(time_measarray[3]-time_measarray[1]); //speed in mm/ms = m/s
+				speed_current = (double) 2*size_wheel/(time_measarray[3]-time_measarray[1]); //speed in mm/ms = m/s
 				
 				UART_PutString("\n\rspeed_current: \n\r");
-				UART_PutInteger((int)speed_current);
+				UART_PutInteger((int)(3.6*speed_current));
+				UART_PutString("\n\r");
+				UART_PutString("\n\r");
 				
 				
 				acc_current = (double) 2*1000*size_wheel*(((1/(time_measarray[4]-time_measarray[2]))-(1/(time_measarray[2]-time_measarray[0])))/(time_measarray[3]-time_measarray[1])); //acceleration in 1000mm/(ms)²=m/s²
@@ -237,7 +248,7 @@ int main (void)
 			JoySelect(&selx, &sely, &push, &mass_first, &mass_second, &mass_third);			//Auslesen Joystick Rueckschreiben der gewünschten Werte auf übergebene Adressen 
 			
 			mass = mass_first + mass_second * 10 + mass_third * 100;						// Rueckspeichern des unter Masse eingestellten Wertes
-			GUI_select(selx, sely, push);													 // Seitenausahl bzw. Menuepunkt
+			//GUI_select(selx, sely, push);													 // Seitenausahl bzw. Menuepunkt
 			
 			JoySelect_Flag = 0;																 //Flag zur anzeige der Aenderung zuruecksetzen
 		}
@@ -247,7 +258,7 @@ int main (void)
 		//if (TimerOverflow == 1)
 		//{
 			//TimerOverflow = 0;
-			counting(&count);																//Zaehlfunktion  => Speichert anzahl der While durchlaufe in count
+			//counting(&count);																//Zaehlfunktion  => Speichert anzahl der While durchlaufe in count
 		
 		
 		
@@ -299,26 +310,26 @@ int main (void)
 			
 			
 			case 2:																	//Ausgabe Seite 1 ohne Menüband
-					LCD_GotoXY(1,3);
-					LCD_PutString_P(PSTR("Geschwindigkeit:"));
+					//LCD_GotoXY(1,3);
+					//LCD_PutString_P(PSTR("Geschwindigkeit:"));
 					
-					LCD_GotoXY(1,4);
-					LCD_PutString_P(PSTR("        "));
+					//LCD_GotoXY(1,4);
+					//LCD_PutString_P(PSTR("        "));
 					
-					LCD_GotoXY(1,4);
-					LCD_PutNumber(/*1*/(int)(speed_current), 10);  //Philipp: PutNumber kann nur 8-bit-Zahlen ausgeben. 
+					//LCD_GotoXY(1,4);
+					//LCD_PutNumber(/*1*/(int)(speed_current), 10);  //Philipp: PutNumber kann nur 8-bit-Zahlen ausgeben. 
 					
-					LCD_GotoXY(8,4);
-					LCD_PutString_P(PSTR("km/h"));
-					LCD_GotoXY(1,5);
-					LCD_PutString_P(PSTR("Leistung:"));
-					LCD_GotoXY(1,6);
+					//LCD_GotoXY(8,4);
+					//LCD_PutString_P(PSTR("km/h"));
+					//LCD_GotoXY(1,5);
+					//LCD_PutString_P(PSTR("Leistung:"));
+					//LCD_GotoXY(1,6);
 					
-					/*LCD_PutNumber(0, 10);*/
+					/*//LCD_PutNumber(0, 10);*/
 					
-					LCD_GotoXY(4,6);
-					LCD_PutString_P(PSTR("W"));
-					LCD_Update();			
+					//LCD_GotoXY(4,6);
+					//LCD_PutString_P(PSTR("W"));
+					//LCD_Update();			
 					
 			break;
 		
@@ -328,7 +339,7 @@ int main (void)
 				
 	
 				
-				//LCD_Clear(0);
+				////LCD_Clear(0);
 				//if (TimerOverflow == 1)
 				//{
 					
@@ -341,26 +352,26 @@ int main (void)
 						value_y_clear = 60 - graph_copy[a];							//value_y_clear  bezieht wert aus array graph copy
 					
 						
-						LCD_DrawLine(offset_x,60,offset_x,value_y_clear,2);			// löschen des alten graphen	   mithilfe graph_copy array 	 graph_copy wird benoetigt um die gezeichneten Linien im Mode 2 von Draw line zu löschen damit nicht der ganze bildschirm gecleart wird
+						//LCD_DrawLine(offset_x,60,offset_x,value_y_clear,2);			// löschen des alten graphen	   mithilfe graph_copy array 	 graph_copy wird benoetigt um die gezeichneten Linien im Mode 2 von Draw line zu löschen damit nicht der ganze bildschirm gecleart wird
 						
 						
-						LCD_DrawLine(offset_x,60,offset_x,value_y,1);				// zeichnen des neuen graphen		  mithilfe graph array 
+						//LCD_DrawLine(offset_x,60,offset_x,value_y,1);				// zeichnen des neuen graphen		  mithilfe graph array 
 					}
 							
-					LCD_Update();													//erst hier wird bildschirm aktualisiert und neu angezeigt
+					//LCD_Update();													//erst hier wird bildschirm aktualisiert und neu angezeigt
 					TimerOverflow = 0;
 			break;			
 			
 			
 			
 			case 12:																//Ausgabe Seite 3 ohne Menüband
-				LCD_GotoXY(11, 4);
-				LCD_PutNumber(mass_first, 10);				
-				LCD_GotoXY(10, 4);
-				LCD_PutNumber(mass_second, 10);			
-				LCD_GotoXY(9, 4);
-				LCD_PutNumber(mass_third, 10);
-				LCD_Update();
+				//LCD_GotoXY(11, 4);
+				//LCD_PutNumber(mass_first, 10);				
+				//LCD_GotoXY(10, 4);
+				//LCD_PutNumber(mass_second, 10);			
+				//LCD_GotoXY(9, 4);
+				//LCD_PutNumber(mass_third, 10);
+				//LCD_Update();
 				
 			break;
 			
@@ -377,9 +388,9 @@ int main (void)
 		static int flag_time_max=0;
 		if(flag_time>flag_time_max)flag_time_max=flag_time;
 		
-		LCD_GotoXY(1,6);
-		LCD_PutNumber(flag_time_max, 10);
-		LCD_Update();
+		//LCD_GotoXY(1,6);
+		//LCD_PutNumber(flag_time_max, 10);
+		//LCD_Update();
 		
 		time_sys += flag_time; // checking if flag_time > 1 would mean main takes too much time
 		flag_time = 0;
