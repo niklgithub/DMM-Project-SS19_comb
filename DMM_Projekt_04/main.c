@@ -9,20 +9,20 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 
-//#include "includes///LCD.h"
+#include "includes/LCD.h"
 //#include "includes/twi.h"
 //#include "includes/dataflash.h"
 #include "includes/Joystick.h"
-//#include "includes//GUI.h"
+#include "includes/GUI.h"
 #include "includes/counting.h"
 #include "includes/uart.h"
 
 #define LENGTH_TABLE 250
 
 
-#define wait_joy_button()       {//LCD_GotoXY(20,7);  \
-	//LCD_PutChar(0x10); \
-	//LCD_Update();      \
+#define wait_joy_button()       {LCD_GotoXY(20,7);  \
+	LCD_PutChar(0x10); \
+	LCD_Update();      \
 while(((PINA)&0x08));while(!((PINA)&0x08));_delay_ms(20);while(((PINA)&0x08)); },
 
 volatile int TimerOverflow = 0;
@@ -133,8 +133,8 @@ int main (void)
 	TCCR1B = (1 << CS12);		// 1024
 	TIMSK1 = (1 << ICIE1);		// Timer1 Interrupt aktiviert
 	
-	//LCD_Init();																				// Initialisierungsroutine des //LCD
-	//LCD_Clear();																			// Löscht den Framebuffer und setzt den Cursor auf (0,0)
+	LCD_Init();																				// Initialisierungsroutine des //LCD
+	LCD_Clear();																			// Löscht den Framebuffer und setzt den Cursor auf (0,0)
 		
 	//start_sequence ();																		//Startbildschirm (Logo und Projektbeschreibung)	
 	
@@ -312,7 +312,7 @@ int main (void)
 			JoySelect(&selx, &sely, &push, &mass_first, &mass_second, &mass_third);			//Auslesen Joystick Rueckschreiben der gewünschten Werte auf übergebene Adressen 
 			
 			mass = mass_first + mass_second * 10 + mass_third * 100;						// Rueckspeichern des unter Masse eingestellten Wertes
-			//GUI_select(selx, sely, push);													 // Seitenausahl bzw. Menuepunkt
+			GUI_select(selx, sely, push);													 // Seitenausahl bzw. Menuepunkt
 			
 			JoySelect_Flag = 0;																 //Flag zur anzeige der Aenderung zuruecksetzen
 		}
@@ -374,26 +374,26 @@ int main (void)
 			
 			
 			case 2:																	//Ausgabe Seite 1 ohne Menüband
-					//LCD_GotoXY(1,3);
-					//LCD_PutString_P(PSTR("Geschwindigkeit:"));
+					LCD_GotoXY(1,3);
+					LCD_PutString_P(PSTR("Geschwindigkeit:"));
 					
-					//LCD_GotoXY(1,4);
-					//LCD_PutString_P(PSTR("        "));
+					LCD_GotoXY(1,4);
+					LCD_PutString_P(PSTR("                     "));
+					LCD_GotoXY(1,4);
+					LCD_PutNumber(/*1*/(int)(3.6 * speed_current), 10);  //Philipp: Ausgabe von Kommazahlen? Eine Nachkommastelle wäre schön
+					LCD_GotoXY(8,4);
+					LCD_PutString_P(PSTR("km/h"));
 					
-					//LCD_GotoXY(1,4);
-					//LCD_PutNumber(/*1*/(int)(speed_current), 10);  //Philipp: PutNumber kann nur 8-bit-Zahlen ausgeben. 
+					LCD_GotoXY(1,5);
+					LCD_PutString_P(PSTR("Leistung:"));
 					
-					//LCD_GotoXY(8,4);
-					//LCD_PutString_P(PSTR("km/h"));
-					//LCD_GotoXY(1,5);
-					//LCD_PutString_P(PSTR("Leistung:"));
-					//LCD_GotoXY(1,6);
-					
-					/*//LCD_PutNumber(0, 10);*/
-					
-					//LCD_GotoXY(4,6);
-					//LCD_PutString_P(PSTR("W"));
-					//LCD_Update();			
+					LCD_GotoXY(1,6);
+					LCD_PutString_P(PSTR("             "));
+					LCD_GotoXY(1,6);
+					LCD_PutNumber((int)(power_current), 10);
+					LCD_GotoXY(8,6);
+					LCD_PutString_P(PSTR("W"));
+					LCD_Update();			
 					
 			break;
 		
@@ -403,7 +403,7 @@ int main (void)
 				
 	
 				
-				////LCD_Clear(0);
+				//LCD_Clear(0);
 				//if (TimerOverflow == 1)
 				//{
 					
@@ -416,26 +416,26 @@ int main (void)
 						value_y_clear = 60 - graph_copy[a];							//value_y_clear  bezieht wert aus array graph copy
 					
 						
-						//LCD_DrawLine(offset_x,60,offset_x,value_y_clear,2);			// löschen des alten graphen	   mithilfe graph_copy array 	 graph_copy wird benoetigt um die gezeichneten Linien im Mode 2 von Draw line zu löschen damit nicht der ganze bildschirm gecleart wird
+						LCD_DrawLine(offset_x,60,offset_x,value_y_clear,2);			// löschen des alten graphen	   mithilfe graph_copy array 	 graph_copy wird benoetigt um die gezeichneten Linien im Mode 2 von Draw line zu löschen damit nicht der ganze bildschirm gecleart wird
 						
 						
-						//LCD_DrawLine(offset_x,60,offset_x,value_y,1);				// zeichnen des neuen graphen		  mithilfe graph array 
+						LCD_DrawLine(offset_x,60,offset_x,value_y,1);				// zeichnen des neuen graphen		  mithilfe graph array 
 					}
 							
-					//LCD_Update();													//erst hier wird bildschirm aktualisiert und neu angezeigt
+					LCD_Update();													//erst hier wird bildschirm aktualisiert und neu angezeigt
 					TimerOverflow = 0;
 			break;			
 			
 			
 			
 			case 12:																//Ausgabe Seite 3 ohne Menüband
-				//LCD_GotoXY(11, 4);
-				//LCD_PutNumber(mass_first, 10);				
-				//LCD_GotoXY(10, 4);
-				//LCD_PutNumber(mass_second, 10);			
-				//LCD_GotoXY(9, 4);
-				//LCD_PutNumber(mass_third, 10);
-				//LCD_Update();
+				LCD_GotoXY(11, 4);
+				LCD_PutNumber(mass_first, 10);				
+				LCD_GotoXY(10, 4);
+				LCD_PutNumber(mass_second, 10);			
+				LCD_GotoXY(9, 4);
+				LCD_PutNumber(mass_third, 10);
+				LCD_Update();
 				
 			break;
 			
