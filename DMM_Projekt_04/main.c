@@ -61,28 +61,26 @@ double 		power_calc = 0; //current power after recording curve (interpolation of
 
 double 		acc_current = 0; //current acceleration in m/s^2 (from 2 sensor posedges before due to filter)
 
-uint32_t 	time_debug = 0;
-uint32_t 	time_sys = 0; //number of milliseconds since µC started
-uint32_t 	time_syslast = 0; //number of milliseconds since µC started
-uint32_t 	time_sensorlastnegedge = 0; //Sensing wont work within first time_debounce ms
-uint32_t 	time_lasthigh = 0;
-uint16_t 	time_debounce = 50;
-uint32_t 	time_syssec = 0;
-uint32_t 	time_recbuttposedge = 0; 
-uint32_t 	time_measarray[5] = {0};
+uint32_t 	time_sys = 0; //milliseconds since µC started
+uint32_t 	time_syssec = 0; //seconds since µC started
+uint16_t 	time_debounce = 50; //period in ms where reed-sensor changes have no effect
+uint32_t 	time_lasthigh = 0; //time in ms of reed-sensors last high-state (for debouncing)
+uint32_t 	time_recbuttposedge = 0; //last posedge of record-button in ms (for debouncing)
+uint32_t 	time_measarray[5] = {0}; //last 5 reed-sensor posedges in ms (for speed and acceleration filter)
 
-int8_t 		state_sensor = -1; //buffers reed-sensor signal
-int8_t 		state_recbutt = -1; //for activating recording of speed-power-curve
+int8_t 		buff_reed = -1; //buffers reed-sensor signal
+int8_t 		buff_recbutt = -1; //buffers record-button signal
 
-int8_t 		flag_recbutt = 0;
-int8_t 		state_record = 0; //if 1 recording a new curve runs
-int8_t 		state_recordlast = 0;
+int8_t 		flag_recbutt = 0; //edge detection of record-button
+int8_t 		state_recordlast = 0; //edge detection of record-button
+
+int8_t 		state_record = 0; //if 1 recording speed-power-curve
+
 int8_t 		flag_pcint = 0; //set on bouncing cycle rotation impulse
 int8_t 		flag_turn = 0; //set on debounced cycle rotation impulse
-int8_t 		lock_debounce = 0; //additional locking to debounce until time_sensorlastnegedge is updated
 int8_t 		flag_time = 0; //to count time_sys in main function
-int8_t 		flag_store = 0; //1 while recording new curve
-uint8_t 	flag_measarray[5] = {0};
+
+uint8_t 	valid_measarray[5] = {0}; //is speed_threshold accomplished in measarray[i]
 
 //++++++++++++++++++++++++++++++++++++ FUNCTION DECLARATIONS ++++++++++++++++++++++++++++++++++++
 double 		calc_power (double speed, double acceleration);
@@ -166,10 +164,10 @@ int main (void)
 			PORTB ^= (1<<PINB0);
 		}
 		
-		state_recbutt = !(PIND & (1<<PIND3)); //inverted because of pull-up on Pin. with debouncing. Intention of this function is toggling state_record.
-		if(state_recbutt)
+		buff_recbutt = !(PIND & (1<<PIND3)); //inverted because of pull-up on Pin. with debouncing. Intention of this function is toggling state_record.
+		if(buff_recbutt)
 		{
-			if(time_recbuttposedge<(time_sys+200))
+			if((time_sys+200) > time_recbuttposedge)
 			{
 				if(flag_recbutt == 0) 
 				{
@@ -190,8 +188,8 @@ int main (void)
 		if(!state_record) PORTB |= (1<<PINB1);
 		
 		
-		state_sensor = !(PIND & (1<<PIND2)); //inverted because of pull-up on Pin. state_sensor == 1 means magnet is near reed contact
-		if(flag_pcint || (state_sensor == 1))
+		buff_reed = !(PIND & (1<<PIND2)); //inverted because of pull-up on Pin. buff_reed == 1 means magnet is near reed contact
+		if(flag_pcint || (buff_reed == 1))
 		{
 			if(time_sys > time_lasthigh + time_debounce)
 			{
@@ -214,21 +212,21 @@ int main (void)
 			time_measarray[3] = time_measarray[4];
 			time_measarray[4] = time_sys;
 			
-			flag_measarray[0] = 1;
-			flag_measarray[1] = flag_measarray[2];
-			flag_measarray[2] = flag_measarray[3];
-			flag_measarray[3] = flag_measarray[4];
+			valid_measarray[0] = 1;
+			valid_measarray[1] = valid_measarray[2];
+			valid_measarray[2] = valid_measarray[3];
+			valid_measarray[3] = valid_measarray[4];
 			if ( (time_measarray[4]-time_measarray[3]) > 0 ) //prevent divide by 0 errors
 			{
-				flag_measarray[4] = ((((double) size_wheel/((double) time_measarray[4]-(double) time_measarray[3]))) >= (double) speed_threshold);
-				if(flag_measarray[4] == 0) state_record = 0;
+				valid_measarray[4] = ((((double) size_wheel/((double) time_measarray[4]-(double) time_measarray[3]))) >= (double) speed_threshold);
+				if(valid_measarray[4] == 0) state_record = 0;
 			}
 			else
 			{
-				flag_measarray[4] = 0;
+				valid_measarray[4] = 0;
 			}
 						
-			if (flag_measarray[0] && flag_measarray[1] && flag_measarray[2] && flag_measarray[3] && flag_measarray[4])
+			if (valid_measarray[0] && valid_measarray[1] && valid_measarray[2] && valid_measarray[3] && valid_measarray[4])
 			{
 				//differentiation based on method of central difference
 				speed_current = (double) 2*size_wheel/(time_measarray[3]-time_measarray[1]); //speed in mm/ms = m/s
