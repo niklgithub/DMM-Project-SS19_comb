@@ -46,44 +46,48 @@ static unsigned int graph_copy[125];
 
 uint8_t JoySelect_Flag = 0;
 
-//Variablen Niklas
-uint32_t time_sys = 0; //number of milliseconds since µC started
-uint32_t time_syslast = 0; //number of milliseconds since µC started
-uint32_t time_sensorlastnegedge = 0; //Sensing wont work within first time_debounce ms
-uint32_t time_lasthigh = 0;
-uint16_t time_debounce = 50;
-int8_t flag_pcint = 0; //set on bouncing cycle rotation impulse
-int8_t flag_turn = 0; //set on debounced cycle rotation impulse
-int8_t lock_debounce = 0; //additional locking to debounce until time_sensorlastnegedge is updated
-int8_t flag_time = 0; //to count time_sys in main function
-int8_t flag_store = 0; //1 while recording new curve
-uint16_t size_wheel = 2215; //wheels circumference in mm
-uint32_t time_measarray[5] = {0};
+//VARIABLES NIKLAS
+double 		mass_eff = 80; //total effective mass in kg: bike + rider + transformed wheels inertia torque
+uint16_t 	size_wheel = 2215; //wheels circumference in mm
 
-uint8_t flag_measarray[5] = {0};
-uint8_t speed_threshold = 1; // in m/s. Lower speeds ain't used for calculations
-uint8_t speed_last = 255;
-uint8_t speed_table[LENGTH_TABLE] = {0}; //8-bit representation: 0 -> 0 km/h; 255 -> (255*0.2) = 51 km/h
-uint8_t power_table[LENGTH_TABLE] = {0}; //8-bit representation: 0 -> 0 W; 255 -> (255*2) = 510 W
-double speed_current = 0; //speed from time 2 samples before
-double acc_current = 0; //acceleration from time 2 samples before
-double power_current = 0; //power in W from time 2 samples before
-double mass_eff = 80; //total effective mass in kg: bike + rider + transformed inertia torque
-double power_calc = 0; //power calculated by interpolation of measured curve
-uint32_t time_syssec = 0;
-int8_t state_sensor = -1; //buffers reed-sensor signal
-int8_t state_recbutt = -1; //for activating recording of speed-power-curve
-uint32_t time_recbuttposedge = 0; 
-int8_t flag_recbutt = 0;
-int8_t state_record = 0; //if 1 recording a new curve runs
-int8_t state_recordlast = 0;
+double 		speed_current = 0; //current speed in m/s (from 2 sensor posedges before due to filter)
+uint8_t 	speed_threshold = 1; //minimum speed threshold in m/s for doing any calculations
+uint8_t 	speed_last = 255; //for storing speed-power-curve. New datapoint only if speed has decreased.
+uint8_t 	speed_table[LENGTH_TABLE] = {0}; //speed list for curve: 0 -> 0 km/h; 255 -> (255*0.2) = 51 km/h
 
-uint32_t time_debug = 0;
+double 		power_current = 0; //current frictional power in W for recording curve (from 2 sensor posedges before due to filter)
+uint8_t 	power_table[LENGTH_TABLE] = {0}; //power list for curve: 0 -> 0 W; 255 -> (255*2) = 510 W
+double 		power_calc = 0; //current power after recording curve (interpolation of measured curve + accelerational power)
 
-//Variablen Niklas ENDE
+double 		acc_current = 0; //current acceleration in m/s^2 (from 2 sensor posedges before due to filter)
 
-double calc_power (double speed, double acceleration);
+uint32_t 	time_debug = 0;
+uint32_t 	time_sys = 0; //number of milliseconds since µC started
+uint32_t 	time_syslast = 0; //number of milliseconds since µC started
+uint32_t 	time_sensorlastnegedge = 0; //Sensing wont work within first time_debounce ms
+uint32_t 	time_lasthigh = 0;
+uint16_t 	time_debounce = 50;
+uint32_t 	time_syssec = 0;
+uint32_t 	time_recbuttposedge = 0; 
+uint32_t 	time_measarray[5] = {0};
 
+int8_t 		state_sensor = -1; //buffers reed-sensor signal
+int8_t 		state_recbutt = -1; //for activating recording of speed-power-curve
+
+int8_t 		flag_recbutt = 0;
+int8_t 		state_record = 0; //if 1 recording a new curve runs
+int8_t 		state_recordlast = 0;
+int8_t 		flag_pcint = 0; //set on bouncing cycle rotation impulse
+int8_t 		flag_turn = 0; //set on debounced cycle rotation impulse
+int8_t 		lock_debounce = 0; //additional locking to debounce until time_sensorlastnegedge is updated
+int8_t 		flag_time = 0; //to count time_sys in main function
+int8_t 		flag_store = 0; //1 while recording new curve
+uint8_t 	flag_measarray[5] = {0};
+
+//++++++++++++++++++++++++++++++++++++ FUNCTION DECLARATIONS ++++++++++++++++++++++++++++++++++++
+double 		calc_power (double speed, double acceleration);
+
+//++++++++++++++++++++++++++++++++++++ ISR ++++++++++++++++++++++++++++++++++++
 ISR(TIMER1_OVF_vect)
 {
 	TimerOverflow = 1;
@@ -104,8 +108,6 @@ ISR (TIMER0_COMPA_vect)
 {
 	flag_time++;
 } 
-
-//ISR Niklas ENDE
 
 int main (void)
 {
@@ -206,24 +208,11 @@ int main (void)
 		{
 			PORTB ^= (1<<PINB3);
 			
-			
 			time_measarray[0] = time_measarray[1];
 			time_measarray[1] = time_measarray[2];
 			time_measarray[2] = time_measarray[3];
 			time_measarray[3] = time_measarray[4];
 			time_measarray[4] = time_sys;
-			
-			/*UART_PutInteger(time_measarray[0]);
-			UART_PutString("\n\r");
-			UART_PutInteger(time_measarray[1]);
-			UART_PutString("\n\r");
-			UART_PutInteger(time_measarray[2]);
-			UART_PutString("\n\r");
-			UART_PutInteger(time_measarray[3]);
-			UART_PutString("\n\r");
-			UART_PutInteger(time_measarray[4]);
-			UART_PutString("\n\r");UART_PutString("\n\r");*/
-			
 			
 			flag_measarray[0] = 1;
 			flag_measarray[1] = flag_measarray[2];
@@ -253,34 +242,6 @@ int main (void)
 				
 				acc_current = 2*(size_wheel/1000.0)*((1000.0/t42-1000.0/t20)/(t31/1000.0)); //in m/s²
 				power_current = (double) (-1) * mass_eff * speed_current * acc_current; //power in W
-				
-				
-				/*UART_PutInteger(t42);
-				UART_PutString("\n\r");
-				UART_PutInteger(t31);
-				UART_PutString("\n\r");
-				UART_PutInteger(t20);
-				UART_PutString("\n\r");
-				UART_PutString("\n\r");*/
-				
-				//char output[10];
-
-				//snprintf(output, 10, "%f", acc_current);
-				/*UART_PutInteger((int)(3.6*speed_current));
-				UART_PutString("\n\r");
-				UART_PutInteger((int)(1000*acc_current));
-				UART_PutString("\n\r");
-				UART_PutInteger((int)power_current);
-				UART_PutString("\n\r");
-				UART_PutString("\n\r");*/
-				/*UART_PutInteger((int)speed_current);
-				UART_PutString("\n\r");
-				//UART_PutString(output);
-				UART_PutInteger((int)(acc_current));
-				UART_PutString("\n\r");
-				UART_PutInteger((int)power_current);
-				UART_PutString("\n\r");
-				UART_PutString("\n\r");*/
 				
 				
 				if (state_record)
@@ -463,7 +424,7 @@ int main (void)
 	return 0;
 }
 
-	
+//++++++++++++++++++++++++++++++++++++ FUNCTION DEFINITIONS ++++++++++++++++++++++++++++++++++++	
 //Funktionen Niklas
 void init_pcint (void)
 {
@@ -561,16 +522,4 @@ double calc_power (double speed, double acceleration)
 	
 	return power_tot;
 }
-//Funktionen Niklas ENDE	
-
-
-
-
-
-
-
-			
-			
-		
-
-
+//Funktionen Niklas ENDE
