@@ -72,13 +72,11 @@ int8_t 		buff_reed = -1; //buffers reed-sensor signal
 int8_t 		buff_recbutt = -1; //buffers record-button signal
 
 int8_t 		flag_recbutt = 0; //edge detection of record-button
-int8_t 		state_recordlast = 0; //edge detection of record-button
-
-int8_t 		state_record = 0; //if 1 recording speed-power-curve
-
 int8_t 		flag_pcint = 0; //set on bouncing cycle rotation impulse
 int8_t 		flag_turn = 0; //set on debounced cycle rotation impulse
 int8_t 		flag_time = 0; //to count time_sys in main function
+
+int8_t 		state_record = 0; //if 1: recording speed-power-curve
 
 uint8_t 	valid_measarray[5] = {0}; //is speed_threshold accomplished in measarray[i]
 
@@ -97,12 +95,12 @@ ISR (PCINT0_vect)
 }
 
 //ISR Niklas
-ISR (INT0_vect)
+ISR (INT0_vect) //reed-sensor
 {
 	flag_pcint = 1;
 }
 
-ISR (TIMER0_COMPA_vect)
+ISR (TIMER0_COMPA_vect) //time_sys
 {
 	flag_time++;
 } 
@@ -143,7 +141,6 @@ int main (void)
 	init_pcint();
 	init_sysclk();
 	UART_Init ();
-												
 	
 
 	//++++++++++++++++++++++++++++++++++++ LOOP +++++++++++++++++++++++++++++++++++++
@@ -171,10 +168,9 @@ int main (void)
 			{
 				if(flag_recbutt == 0) 
 				{
-					flag_recbutt = 1;
+					flag_recbutt = 1; //prevent multiple toggles if button pressed longer
 					state_record = !state_record;
-					
-					
+					if(state_record == 1) reset_table(); //new record -> reset table
 				}
 			}
 		}
@@ -198,9 +194,6 @@ int main (void)
 			time_lasthigh = time_sys;
 			flag_pcint = 0;
 		}
-		
-		if(state_record && (state_recordlast == 0)) reset_table();
-		state_recordlast = state_record;
 		
 		if (flag_turn) //to do: add switch to activate storing a new curve
 		{
